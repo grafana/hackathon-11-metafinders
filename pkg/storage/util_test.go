@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"github.com/grafana/loki/v3/pkg/storage/stores/shipper/indexshipper/tsdb/index"
 	"sort"
 	"testing"
 	"time"
@@ -190,6 +191,9 @@ func (m *mockChunkStore) Put(_ context.Context, _ []chunk.Chunk) error { return 
 func (m *mockChunkStore) PutOne(_ context.Context, _, _ model.Time, _ chunk.Chunk) error {
 	return nil
 }
+func (m *mockChunkStore) UpdateSeriesStats(_ context.Context, _, _ model.Time, _ string, _ uint64, _ *index.StreamStats) error {
+	return nil
+}
 
 func (m *mockChunkStore) GetSeries(ctx context.Context, _ string, _, _ model.Time, matchers ...*labels.Matcher) ([]labels.Labels, error) {
 	result := make([]labels.Labels, 0, len(m.chunks))
@@ -221,8 +225,8 @@ func (m *mockChunkStore) LabelValuesForMetricName(_ context.Context, _ string, _
 	return nil, nil
 }
 
-func (m *mockChunkStore) LabelNamesForMetricName(_ context.Context, _ string, _, _ model.Time, _ string, _ ...*labels.Matcher) ([]string, error) {
-	return nil, nil
+func (m *mockChunkStore) LabelNamesForMetricName(ctx context.Context, userID string, from model.Time, through model.Time, metricName string, matchers ...*labels.Matcher) ([]string, []string, error) {
+	return nil, nil, nil
 }
 
 func (m *mockChunkStore) SetChunkFilterer(f chunk.RequestChunkFilterer) {

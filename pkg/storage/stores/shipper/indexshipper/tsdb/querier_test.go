@@ -24,7 +24,7 @@ func mustParseLabels(s string) labels.Labels {
 
 func TestQueryIndex(t *testing.T) {
 	dir := t.TempDir()
-	b := NewBuilder(index.FormatV3)
+	b := NewBuilder(index.FormatV4)
 	cases := []struct {
 		labels labels.Labels
 		chunks []index.ChunkMeta
@@ -114,12 +114,12 @@ func TestQueryIndex(t *testing.T) {
 	)
 
 	require.True(t, p.Next())
-	_, err = reader.Series(p.At(), 0, math.MaxInt64, &ls, &chks)
+	_, err = reader.Series(p.At(), 0, math.MaxInt64, &ls, &chks, nil)
 	require.Nil(t, err)
 	require.Equal(t, cases[0].labels.String(), ls.String())
 	require.Equal(t, cases[0].chunks, chks)
 	require.True(t, p.Next())
-	_, err = reader.Series(p.At(), 0, math.MaxInt64, &ls, &chks)
+	_, err = reader.Series(p.At(), 0, math.MaxInt64, &ls, &chks, nil)
 	require.Nil(t, err)
 	require.Equal(t, cases[1].labels.String(), ls.String())
 	require.Equal(t, cases[1].chunks, chks)

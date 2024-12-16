@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/grafana/loki/v3/pkg/storage/stores/shipper/indexshipper/tsdb/index"
 	"math"
 	"time"
 
@@ -329,6 +330,11 @@ type storeMock struct {
 func newStoreMock() *storeMock {
 	return &storeMock{}
 }
+
+func (s *storeMock) UpdateSeriesStats(_ context.Context, _, _ model.Time, _ string, _ uint64, _ *index.StreamStats) error {
+	return nil
+}
+
 func (s *storeMock) SetChunkFilterer(chunk.RequestChunkFilterer)    {}
 func (s *storeMock) SetExtractorWrapper(log.SampleExtractorWrapper) {}
 func (s *storeMock) SetPipelineWrapper(log.PipelineWrapper)         {}
@@ -372,9 +378,9 @@ func (s *storeMock) LabelValuesForMetricName(ctx context.Context, userID string,
 	return args.Get(0).([]string), args.Error(1)
 }
 
-func (s *storeMock) LabelNamesForMetricName(ctx context.Context, userID string, from, through model.Time, metricName string, m ...*labels.Matcher) ([]string, error) {
+func (s *storeMock) LabelNamesForMetricName(ctx context.Context, userID string, from model.Time, through model.Time, metricName string, m ...*labels.Matcher) ([]string, []string, error) {
 	args := s.Called(ctx, userID, from, through, metricName, m)
-	return args.Get(0).([]string), args.Error(1)
+	return args.Get(0).([]string), nil, args.Error(1)
 }
 
 func (s *storeMock) GetChunkFetcher(_ model.Time) *fetcher.Fetcher {

@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	index2 "github.com/grafana/loki/v3/pkg/storage/stores/shipper/indexshipper/tsdb/index"
+
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/grafana/dskit/backoff"
@@ -433,6 +435,10 @@ func TestIngesterStreamLimitExceeded(t *testing.T) {
 type mockStore struct {
 	mtx    sync.Mutex
 	chunks map[string][]chunk.Chunk
+}
+
+func (s *mockStore) UpdateSeriesStats(_ context.Context, _, _ model.Time, _ string, _ uint64, _ *index2.StreamStats) error {
+	return nil
 }
 
 func (s *mockStore) Put(ctx context.Context, chunks []chunk.Chunk) error {

@@ -89,7 +89,7 @@ func TestSingleIdx(t *testing.T) {
 		t.Run(variant.desc, func(t *testing.T) {
 			idx := variant.fn()
 			t.Run("GetChunkRefs", func(t *testing.T) {
-				refs, err := idx.GetChunkRefs(context.Background(), "fake", 1, 5, nil, nil, labels.MustNewMatcher(labels.MatchEqual, "foo", "bar"))
+				refs, err := idx.GetChunkRefs(context.Background(), "fake", 1, 5, nil, nil, nil, labels.MustNewMatcher(labels.MatchEqual, "foo", "bar"))
 				require.Nil(t, err)
 
 				expected := []ChunkRef{
@@ -130,7 +130,7 @@ func TestSingleIdx(t *testing.T) {
 					Shard: 1,
 					Of:    2,
 				}
-				shardedRefs, err := idx.GetChunkRefs(context.Background(), "fake", 1, 5, nil, &shard, labels.MustNewMatcher(labels.MatchEqual, "foo", "bar"))
+				shardedRefs, err := idx.GetChunkRefs(context.Background(), "fake", 1, 5, nil, nil, &shard, labels.MustNewMatcher(labels.MatchEqual, "foo", "bar"))
 
 				require.Nil(t, err)
 
@@ -176,7 +176,7 @@ func TestSingleIdx(t *testing.T) {
 
 			t.Run("LabelNames", func(t *testing.T) {
 				// request data at the end of the tsdb range, but it should return all labels present
-				ls, err := idx.LabelNames(context.Background(), "fake", 9, 10)
+				ls, _, err := idx.LabelNames(context.Background(), "fake", 9, 10)
 				require.Nil(t, err)
 				sort.Strings(ls)
 				require.Equal(t, []string{"bazz", "bonk", "foo"}, ls)
@@ -184,7 +184,7 @@ func TestSingleIdx(t *testing.T) {
 
 			t.Run("LabelNamesWithMatchers", func(t *testing.T) {
 				// request data at the end of the tsdb range, but it should return all labels present
-				ls, err := idx.LabelNames(context.Background(), "fake", 9, 10, labels.MustNewMatcher(labels.MatchEqual, "bazz", "buzz"))
+				ls, _, err := idx.LabelNames(context.Background(), "fake", 9, 10, labels.MustNewMatcher(labels.MatchEqual, "bazz", "buzz"))
 				require.Nil(t, err)
 				sort.Strings(ls)
 				require.Equal(t, []string{"bazz", "foo"}, ls)
@@ -251,7 +251,7 @@ func BenchmarkTSDBIndex_GetChunkRefs(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		chkRefs, err := tsdbIndex.GetChunkRefs(context.Background(), "fake", queryFrom, queryThrough, nil, nil, labels.MustNewMatcher(labels.MatchEqual, "foo", "bar"))
+		chkRefs, err := tsdbIndex.GetChunkRefs(context.Background(), "fake", queryFrom, queryThrough, nil, nil, nil, labels.MustNewMatcher(labels.MatchEqual, "foo", "bar"))
 		require.NoError(b, err)
 		require.Len(b, chkRefs, numChunksToMatch*2)
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-kit/log/level"
 	"github.com/grafana/dskit/httpgrpc"
+	"github.com/grafana/loki/v3/pkg/storage/stores/shipper/indexshipper/tsdb/index"
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
@@ -82,6 +83,11 @@ type stream struct {
 	chunkHeadBlockFormat chunkenc.HeadBlockFmt
 
 	configs *runtime.TenantConfigs
+
+	// closedStreamStats has the stats up to the most recent closed chunk.
+	closedStreamStats *index.StreamStats
+	// openStreamStats has the stats up to the most recent open chunk (i.e. closedChunksStats + newer data).
+	openStreamStats *index.StreamStats
 }
 
 type chunkDesc struct {
@@ -133,6 +139,8 @@ func newStream(
 		chunkHeadBlockFormat: headBlockFmt,
 
 		configs: configs,
+
+		openStreamStats: index.NewStreamStats(),
 	}
 }
 
@@ -354,6 +362,8 @@ func (s *stream) storeEntries(ctx context.Context, entries []logproto.Entry, usa
 			s.handleLoggingOfDuplicateEntry(entries[i])
 		}
 
+		s.openStreamStats.AddStructuredMetadata(entries[i].StructuredMetadata)
+
 		s.entryCt++
 		s.lastLine.ts = entries[i].Timestamp
 		s.lastLine.content = entries[i].Line
@@ -506,6 +516,7 @@ func (s *stream) cutChunk(ctx context.Context) *chunkDesc {
 		level.Error(util_log.WithContext(ctx, util_log.Logger)).Log("msg", "failed to Close chunk", "err", err)
 	}
 	chunk.closed = true
+	s.cutSeriesStats()
 
 	s.metrics.samplesPerChunk.Observe(float64(chunk.chunk.Size()))
 	s.metrics.blocksPerChunk.Observe(float64(chunk.chunk.BlockCount()))
@@ -647,6 +658,15 @@ func (s *stream) addTailer(t *tailer) {
 	defer s.tailerMtx.Unlock()
 
 	s.tailers[t.getID()] = t
+}
+
+func (s *stream) cutSeriesStats() {
+	s.closedStreamStats = s.openStreamStats
+	s.openStreamStats = s.closedStreamStats.Copy()
+}
+
+func (s *stream) flushableSeriesStats() *index.StreamStats {
+	return s.closedStreamStats
 }
 
 func headBlockType(chunkfmt byte, unorderedWrites bool) chunkenc.HeadBlockFmt {

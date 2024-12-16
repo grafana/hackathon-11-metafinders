@@ -176,6 +176,14 @@ func (h *Head) Append(ls labels.Labels, fprint uint64, chks index.ChunkMetas) (c
 	return
 }
 
+func (h *Head) updateSeriesStats(fp uint64, stats *index.StreamStats) {
+	h.series.updateSeriesStats(fp, stats)
+}
+
+func (h *Head) ResetSeriesStats() {
+	h.series.resetSeriesStats()
+}
+
 // seriesHashmap is a simple hashmap for memSeries by their label set. It is built
 // on top of a regular hashmap and holds a slice of series to resolve hash collisions.
 // Its methods require the hash to be submitted with it to avoid re-computations throughout
@@ -284,12 +292,31 @@ func (s *stripeSeries) Append(
 	return
 }
 
+func (s *stripeSeries) updateSeriesStats(fp uint64, stats *index.StreamStats) {
+	series := s.getByID(fp)
+
+	series.Lock()
+	defer series.Unlock()
+	series.stats.Merge(stats)
+}
+
+func (s *stripeSeries) resetSeriesStats() {
+	for _, seriesMap := range s.series {
+		seriesMap.Lock()
+		for _, series := range seriesMap.m {
+			series.stats.Reset()
+		}
+		seriesMap.Unlock()
+	}
+}
+
 type memSeries struct {
 	sync.RWMutex
-	ref  uint64 // The unique reference within a *Head
-	ls   labels.Labels
-	fp   uint64
-	chks index.ChunkMetas
+	ref   uint64 // The unique reference within a *Head
+	ls    labels.Labels
+	fp    uint64
+	chks  index.ChunkMetas
+	stats index.StreamStats
 }
 
 func newMemSeries(ref uint64, ls labels.Labels, fp uint64) *memSeries {
